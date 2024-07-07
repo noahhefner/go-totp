@@ -1,26 +1,35 @@
-package main
+package totp
 
 import (
 	"fmt"
 	"crypto/hmac"
-	"crypto/sha256"
 	"hash"
 	"encoding/hex"
-	"time"
 	"strconv"
-
 )
 
-var DIGITS_POWER = []int{1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000}
+var digits_power = []int{1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000}
 
-func main () {
+type TOTPGenerator struct{
+	Key 		string
+	CodeLength 	int
+	Algorithm	func() hash.Hash
+}
 
-	key := "3132333435363738393031323334353637383930313233343536373839303132"
-	unixTime := time.Now().Unix()
-	returnDigits := 8
-	algo := sha256.New
-	fmt.Println(generateTOTP256(key, unixTime, returnDigits, algo))
-	
+func (g TOTPGenerator)Generate(unixTime int64) string {
+	return generateTOTP256(g.Key, unixTime, g.CodeLength, g.Algorithm)
+}
+
+
+func NewGenerator (key string, codeLength int, algorithm func() hash.Hash) *TOTPGenerator {
+
+	// TODO: Validate args
+
+	return &TOTPGenerator{
+		Key: key,
+		CodeLength: codeLength,
+		Algorithm: algorithm,
+	}
 }
 
 func generateTOTP256 (key string, unixTime int64, returnDigits int, algo func() hash.Hash) string {
@@ -46,7 +55,7 @@ func generateTOTP256 (key string, unixTime int64, returnDigits int, algo func() 
 	          (int(sha256_hash[offset+2]) & 0xff) << 8  |
 	          (int(sha256_hash[offset+3]) & 0xff)
 
-	otp := binary % DIGITS_POWER[returnDigits]
+	otp := binary % digits_power[returnDigits]
 
 	result := strconv.Itoa(int(otp))
 	for len(result) < returnDigits {
